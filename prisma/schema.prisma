@@ -1,0 +1,203 @@
+// Prisma Schema — Yordanova Transport Rechnungssystem
+// Datenbank: PostgreSQL (Supabase)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  STAFF
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  CANCELLED
+  OVERDUE
+}
+
+enum Currency {
+  TRY
+  USD
+  EUR
+}
+
+// Models
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  pin       String // 4-stelliger PIN (gehasht)
+  role      UserRole @default(STAFF)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoices Invoice[]
+
+  @@index([email])
+}
+
+model Company {
+  id             String   @id @default(cuid())
+  customerNumber String?  @unique // Kundennummer (z.B. KD-1001)
+  name           String
+  taxId          String? // Steuernummer
+  ustIdNr        String? // USt-IdNr (z.B. DE123456789)
+  taxOffice      String? // Finanzamt
+  address        String
+  city           String?
+  postalCode     String?
+  country        String   @default("Deutschland")
+  phone          String?
+  email          String?
+  website        String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  invoices Invoice[]
+
+  @@index([name])
+  @@index([taxId])
+}
+
+model ProductService {
+  id             String   @id @default(cuid())
+  code           String   @unique // Produktcode
+  name           String
+  description    String?
+  unit           String   @default("Stk") // Einheit (Stk, Std, kg, Pauschal, ...)
+  defaultPrice   Decimal
+  currency       Currency @default(EUR)
+  defaultVatRate Decimal  @default(19) // MwSt-Satz (0, 7, 19)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  invoiceItems InvoiceItem[]
+
+  @@index([code])
+  @@index([name])
+}
+
+model Invoice {
+  id            String  @id @default(cuid())
+  invoiceNumber String  @unique // RE-2026-0001
+  companyId     String
+  company       Company @relation(fields: [companyId], references: [id])
+
+  issueDate          DateTime  @default(now()) // Rechnungsdatum
+  serviceDate        DateTime? // Leistungsdatum (§14 UStG Pflichtangabe)
+  servicePeriodStart DateTime? // Leistungszeitraum von
+  servicePeriodEnd   DateTime? // Leistungszeitraum bis
+  dueDate            DateTime? // Fälligkeitsdatum (Zahlungsziel)
+  paymentDate        DateTime? // Zahlungsdatum
+
+  status InvoiceStatus @default(DRAFT)
+
+  currency     Currency @default(EUR)
+  exchangeRate Decimal  @default(1)
+
+  // Berechnete Summen
+  subtotal Decimal // Zwischensumme (netto)
+  totalVat Decimal // Gesamt MwSt
+  total    Decimal // Gesamtsumme (brutto)
+
+  notes         String? // Notizen
+  paymentTerms  String? // Zahlungsbedingungen
+  paymentMethod String? // Zahlungsart (Überweisung, Bar, ...)
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items InvoiceItem[]
+
+  @@index([invoiceNumber])
+  @@index([companyId])
+  @@index([status])
+  @@index([issueDate])
+  @@index([dueDate])
+  @@index([createdById])
+}
+
+model InvoiceItem {
+  id        String  @id @default(cuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   ProductService? @relation(fields: [productId], references: [id])
+
+  description String
+  quantity    Decimal
+  unit        String  @default("Stk")
+  unitPrice   Decimal
+
+  vatRate   Decimal // MwSt-Satz (0, 7, 19)
+  vatAmount Decimal // MwSt-Betrag
+
+  subtotal Decimal // Zwischensumme (netto)
+  total    Decimal // Gesamt (brutto)
+
+  order Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([invoiceId])
+  @@index([productId])
+}
+
+model InvoiceSettings {
+  id String @id @default(cuid())
+
+  // Firmendaten (eigenes Unternehmen)
+  companyName       String
+  companyOwner      String? // Inhaber/Geschäftsführer
+  companyTaxId      String // Steuernummer
+  companyUstIdNr    String? // USt-IdNr (DE...)
+  companyTaxOffice  String // Finanzamt
+  companyAddress    String
+  companyCity       String?
+  companyPostalCode String?
+  companyCountry    String  @default("Deutschland")
+  companyPhone      String?
+  companyEmail      String?
+  companyWebsite    String?
+  companyLogo       String? // Logo URL oder Base64
+
+  // Kleinunternehmerregelung §19 UStG
+  kleinunternehmer Boolean @default(false)
+
+  // Bankverbindung
+  bankName          String?
+  bankAccountHolder String?
+  bankIBAN          String?
+  bankBIC           String?
+
+  // Rechnungsnummerierung
+  invoicePrefix       String @default("RE")
+  invoiceNumberFormat String @default("YYYY-NNNN")
+  currentYear         Int
+  currentCounter      Int    @default(0)
+
+  // Standardwerte
+  defaultCurrency        Currency @default(EUR)
+  defaultVatRate         Decimal  @default(19)
+  defaultPaymentTermDays Int      @default(14)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([currentYear])
+}
