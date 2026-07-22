@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { invoiceSchema } from '@/lib/validators'
-import { generateInvoiceNumber } from '@/lib/invoice-number'
+import { generateInvoiceNumber, syncCounterWithManualNumber } from '@/lib/invoice-number'
 import { calculateInvoiceItem } from '@/lib/invoice-calculator'
 
 export async function GET(request: NextRequest) {
@@ -74,10 +74,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { items, ...invoiceData } = validation.data
+    const { items, invoiceNumber: manualNumber, ...invoiceData } = validation.data
 
-    // Generate invoice number
-    const invoiceNumber = await generateInvoiceNumber()
+    // Rechnungsnummer: manuell (falls angegeben) oder automatisch
+    let invoiceNumber: string
+    if (manualNumber && manualNumber.trim()) {
+      invoiceNumber = manualNumber.trim()
+
+      const duplicate = await prisma.invoice.findUnique({
+        where: { invoiceNumber },
+        select: { id: true },
+      })
+      if (duplicate) {
+        return NextResponse.json(
+          { error: `Rechnungsnummer "${invoiceNumber}" existiert bereits` },
+          { status: 400 }
+        )
+      }
+
+      // Zähler anheben, damit die Automatik keine Duplikate erzeugt
+      await syncCounterWithManualNumber(invoiceNumber)
+    } else {
+      invoiceNumber = await generateInvoiceNumber()
+    }
 
     // Calculate totals
     let subtotal = 0

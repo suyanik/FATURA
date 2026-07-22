@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { invoiceSchema } from '@/lib/validators'
 import { calculateInvoiceItem } from '@/lib/invoice-calculator'
+import { syncCounterWithManualNumber } from '@/lib/invoice-number'
 
 export async function GET(
   request: NextRequest,
@@ -110,7 +111,30 @@ export async function PATCH(
       )
     }
 
-    const { items, ...invoiceData } = validation.data
+    const { items, invoiceNumber: manualNumber, ...invoiceData } = validation.data
+
+    // Rechnungsnummer ändern (falls angegeben und abweichend)
+    let newInvoiceNumber: string | undefined
+    if (
+      manualNumber &&
+      manualNumber.trim() &&
+      manualNumber.trim() !== existing.invoiceNumber
+    ) {
+      newInvoiceNumber = manualNumber.trim()
+
+      const duplicate = await prisma.invoice.findUnique({
+        where: { invoiceNumber: newInvoiceNumber },
+        select: { id: true },
+      })
+      if (duplicate) {
+        return NextResponse.json(
+          { error: `Rechnungsnummer "${newInvoiceNumber}" existiert bereits` },
+          { status: 400 }
+        )
+      }
+
+      await syncCounterWithManualNumber(newInvoiceNumber)
+    }
 
     // Calculate totals
     let subtotal = 0
@@ -142,6 +166,7 @@ export async function PATCH(
       where: { id },
       data: {
         ...invoiceData,
+        ...(newInvoiceNumber ? { invoiceNumber: newInvoiceNumber } : {}),
         subtotal,
         totalVat,
         total,

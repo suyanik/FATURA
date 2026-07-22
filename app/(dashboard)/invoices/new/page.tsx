@@ -50,6 +50,7 @@ export default function NewInvoicePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState('')
+  const [invoiceNumber, setInvoiceNumber] = useState('')
 
   // Data
   const [companies, setCompanies] = useState<Company[]>([])
@@ -95,6 +96,7 @@ export default function NewInvoicePage() {
       setCompanies(companiesData)
       setProducts(productsData)
       setNextInvoiceNumber(nextNumberData.invoiceNumber)
+      setInvoiceNumber(nextNumberData.invoiceNumber)
     } catch (err) {
       console.error('Error fetching data:', err)
     }
@@ -178,6 +180,7 @@ export default function NewInvoicePage() {
     setLoading(true)
 
     const data = {
+      invoiceNumber: invoiceNumber.trim() || undefined,
       companyId,
       issueDate: new Date(issueDate),
       serviceDate: serviceDate ? new Date(serviceDate) : undefined,
@@ -296,11 +299,16 @@ export default function NewInvoicePage() {
                 <Label htmlFor="invoiceNumber" className="text-sm font-semibold">Rechnungsnummer</Label>
                 <Input
                   id="invoiceNumber"
-                  value={nextInvoiceNumber || 'Laden...'}
-                  readOnly
-                  disabled
-                  className="bg-secondary/50 font-mono"
+                  value={invoiceNumber}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                  placeholder={nextInvoiceNumber || 'Laden...'}
+                  className="bg-background font-mono"
                 />
+                {invoiceNumber !== nextInvoiceNumber && nextInvoiceNumber && (
+                  <p className="text-[11px] text-warning">
+                    Manuell geändert (automatisch: {nextInvoiceNumber})
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="issueDate" className="text-sm font-semibold">Rechnungsdatum</Label>

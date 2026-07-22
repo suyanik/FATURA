@@ -52,6 +52,10 @@ export type InvoiceItemFormData = z.infer<typeof invoiceItemSchema>
 
 // Invoice validation
 export const invoiceSchema = z.object({
+  invoiceNumber: z
+    .string()
+    .regex(/^[A-Za-z0-9][A-Za-z0-9\-\/]{2,29}$/, 'Ungültige Rechnungsnummer (z.B. RE-2026-0001)')
+    .optional(),
   companyId: z.string().min(1, 'Kundenauswahl ist erforderlich'),
   issueDate: z.coerce.date(),
   serviceDate: z.coerce.date().optional(),

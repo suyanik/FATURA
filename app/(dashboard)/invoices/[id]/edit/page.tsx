@@ -80,6 +80,7 @@ export default function EditInvoicePage({
   const [products, setProducts] = useState<Product[]>([])
 
   // Form state
+  const [invoiceNumber, setInvoiceNumber] = useState('')
   const [companyId, setCompanyId] = useState('')
   const [issueDate, setIssueDate] = useState('')
   const [serviceDate, setServiceDate] = useState('')
@@ -130,6 +131,7 @@ export default function EditInvoicePage({
       setProducts(productsData)
 
       // Set form values
+      setInvoiceNumber(invoiceData.invoiceNumber)
       setCompanyId(invoiceData.companyId)
       setIssueDate(invoiceData.issueDate.split('T')[0])
       setServiceDate(invoiceData.serviceDate ? invoiceData.serviceDate.split('T')[0] : '')
@@ -235,6 +237,7 @@ export default function EditInvoicePage({
     setSaving(true)
 
     const data = {
+      invoiceNumber: invoiceNumber.trim() || undefined,
       companyId,
       issueDate: new Date(issueDate),
       serviceDate: serviceDate ? new Date(serviceDate) : undefined,
@@ -325,6 +328,21 @@ export default function EditInvoicePage({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="invoiceNumber">Rechnungsnummer</Label>
+                <Input
+                  id="invoiceNumber"
+                  value={invoiceNumber}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                  className="font-mono"
+                />
+                {invoice && invoiceNumber !== invoice.invoiceNumber && (
+                  <p className="text-xs text-amber-600">
+                    Nummer wird geändert (vorher: {invoice.invoiceNumber})
+                  </p>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="company">
                   Kunde <span className="text-primary">*</span>

@@ -92,7 +92,7 @@ export default async function InvoicesPage({
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="flex items-center justify-between border-t border-border pt-4 mt-2">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-t border-border pt-4 mt-2">
                   <div className="grid grid-cols-3 gap-6 text-sm flex-1">
                     <div>
                       <p className="text-muted-foreground text-xs uppercase tracking-wider">Zwischensumme</p>
@@ -114,7 +114,7 @@ export default async function InvoicesPage({
                     </div>
                   </div>
 
-                  <div className="flex gap-2 ml-6">
+                  <div className="flex flex-wrap gap-2 lg:ml-6">
                     <Link href={`/invoices/${invoice.id}`}>
                       <Button variant="outline" size="sm" className="h-8">
                         <Eye className="h-4 w-4 mr-2" />

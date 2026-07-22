@@ -78,3 +78,32 @@ export async function previewNextInvoiceNumber(): Promise<string> {
   const counter = nextCounter.toString().padStart(4, '0')
   return `${settings.invoicePrefix}-${currentYear}-${counter}`
 }
+
+/**
+ * Zähler mit manuell vergebener Rechnungsnummer synchronisieren.
+ * Wenn die Nummer dem Muster PREFIX-JAHR-NNNN entspricht und höher ist
+ * als der aktuelle Zähler, wird der Zähler angehoben, damit die
+ * automatische Nummerierung keine Duplikate erzeugt.
+ */
+export async function syncCounterWithManualNumber(
+  invoiceNumber: string
+): Promise<void> {
+  const settings = await prisma.invoiceSettings.findFirst()
+  if (!settings) return
+
+  const pattern = new RegExp(
+    `^${settings.invoicePrefix}-(\\d{4})-(\\d{1,6})$`
+  )
+  const match = invoiceNumber.match(pattern)
+  if (!match) return
+
+  const year = parseInt(match[1], 10)
+  const number = parseInt(match[2], 10)
+
+  if (year === settings.currentYear && number > settings.currentCounter) {
+    await prisma.invoiceSettings.update({
+      where: { id: settings.id },
+      data: { currentCounter: number },
+    })
+  }
+}

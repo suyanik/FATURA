@@ -17,6 +17,15 @@ export const metadata: Metadata = {
     "Professionelles Rechnungssystem für Yordanova Transport – Rechnungen erstellen, verwalten und versenden.",
   applicationName: "Yordanova Rechnungen",
   robots: { index: false, follow: false },
+  icons: {
+    icon: "/icon-192.png",
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Rechnungen",
+  },
 };
 
 export const viewport: Viewport = {
